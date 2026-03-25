@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with role-based access",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "faculty", "admin"] },
+        "canEdit": { "type": "boolean", "description": "Specific permission for faculty to edit MOAs" },
+        "isBlocked": { "type": "boolean", "description": "Whether the user is blocked from the system" },
+        "bio": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "isBlocked"]
+    },
+    "MOA": {
+      "title": "MOA",
+      "description": "Memorandum of Agreement record",
+      "type": "object",
+      "properties": {
+        "hteId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "address": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "industryType": { "type": "string" },
+        "effectiveDate": { "type": "string", "format": "date-time" },
+        "status": { 
+          "type": "string", 
+          "enum": [
+            "APPROVED: Signed by President",
+            "APPROVED: Ongoing Notarization",
+            "APPROVED: No Notarization Needed",
+            "PROCESSING: Awaiting signature of the MOA draft by HTE partner",
+            "PROCESSING: MOA draft sent to Legal Office for review",
+            "PROCESSING: MOA draft and legal opinion sent to VPAA/OP for approval",
+            "EXPIRED: No renewal done",
+            "EXPIRING: Two months before expiration date"
+          ] 
+        },
+        "college": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" },
+        "deletedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "documentUrl": { "type": "string" }
+      },
+      "required": ["hteId", "companyName", "status", "deleted"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Record of changes to MOA entries",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "operation": { "type": "string", "enum": ["INSERT", "EDIT", "SOFT DELETE", "RECOVER", "PERMANENT DELETE"] },
+        "recordId": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["userId", "timestamp", "operation", "recordId"]
+    },
+    "MOAFile": {
+      "title": "MOA File",
+      "description": "Metadata for files uploaded to Cloudinary related to an MOA",
+      "type": "object",
+      "properties": {
+        "fileName": { "type": "string" },
+        "fileURL": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" },
+        "relatedMOA": { "type": "string" }
+      },
+      "required": ["fileName", "fileURL", "uploadedBy", "uploadedAt", "relatedMOA"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and permissions"
+    },
+    "moas/{moaId}": {
+      "schema": "MOA",
+      "description": "MOA records"
+    },
+    "auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "System audit trail"
+    },
+    "moaFiles/{fileId}": {
+      "schema": "MOAFile",
+      "description": "Metadata for files uploaded to Cloudinary"
+    }
+  }
+}

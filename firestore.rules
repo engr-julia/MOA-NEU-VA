@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helpers ---
+    function isAuthenticated() { return request.auth != null; }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email == "julia.rodrigo@neu.edu.ph" || 
+              request.auth.token.email == "jcesperanza@neu.edu.ph");
+    }
+
+    function isAdmin() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isSuperAdmin() || (isAuthenticated() && userDoc.data != null && userDoc.data.role == 'admin');
+    }
+
+    function isOwner(userId) { return isAuthenticated() && request.auth.uid == userId; }
+
+    function isBlocked() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuthenticated() && userDoc.data != null && userDoc.data.isBlocked == true;
+    }
+
+    function isFaculty() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuthenticated() && userDoc.data != null && userDoc.data.role == 'faculty';
+    }
+
+    function isStudent() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuthenticated() && userDoc.data != null && userDoc.data.role == 'student';
+    }
+
+    function canEdit() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuthenticated() && userDoc.data != null && 
+             (userDoc.data.canEdit == true || userDoc.data.role == 'faculty' || userDoc.data.role == 'admin');
+    }
+
+    // --- Validation Helpers ---
+    function hasRequiredFields(fields) { return request.resource.data.keys().hasAll(fields); }
+    function isValidString(field, minLen, maxLen) {
+      return request.resource.data[field] is string && 
+             request.resource.data[field].size() >= minLen && 
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    // --- Collections ---
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && hasRequiredFields(['uid', 'email', 'role', 'isBlocked']);
+      allow update: if isAuthenticated() && !isBlocked() && (
+        isAdmin() || 
+        (isOwner(userId) && 
+         request.resource.data.role == resource.data.role &&
+         request.resource.data.isBlocked == resource.data.isBlocked &&
+         request.resource.data.uid == resource.data.uid &&
+         request.resource.data.email == resource.data.email &&
+         (!('canEdit' in request.resource.data) || request.resource.data.canEdit == resource.data.canEdit))
+      );
+      allow delete: if false;
+    }
+
+    match /moas/{moaId} {
+      allow read: if isAuthenticated() && !isBlocked() && (
+        isAdmin() ||
+        (isFaculty() && resource.data.deleted == false) ||
+        (isStudent() && resource.data.deleted == false)
+      );
+
+      allow create, update: if isAuthenticated() && !isBlocked() && (
+        isAdmin() || 
+        (isFaculty() && canEdit())
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && !isBlocked();
+      allow update, delete: if false;
+    }
+
+    match /userLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    match /moaFiles/{fileId} {
+      allow read: if isAuthenticated() && !isBlocked() && (isAdmin() || isFaculty());
+      allow create: if isAuthenticated() && !isBlocked() && 
+        request.resource.data.uploadedBy == request.auth.token.email &&
+        isValidString('fileName', 1, 255) &&
+        isValidString('fileURL', 1, 2048) &&
+        request.resource.data.uploadedAt is timestamp &&
+        isValidString('relatedMOA', 1, 100);
+      allow update, delete: if false;
+    }
+  }
+}
