@@ -2,6 +2,8 @@
 
 **MOA Electronic Management & Oversight (MEMO)** is a centralized, secure, and real-time platform designed for New Era University to manage institutional partnerships and Memorandums of Agreement (MOA).
 
+- **Run the app**: https://moaneuva.vercel.app
+
 ---
 
 ## 🚀 Key Features
